@@ -147,3 +147,52 @@ def plot_image_with_title(image, title):                               # Visuali
     plt.axis('off')
     plt.show()
 #......................................................................................................................
+if __name__ == "__main__":  # Main entry point for the script
+    parser = argparse.ArgumentParser(description="Image Compression and Error Correction")  # Argument parser
+    parser.add_argument("--path", type=str, required=True, help="Path to the input image")  # Input image path
+    parser.add_argument("--mode", type=str, choices=["compress", "error_model", "error_correction", "bsa"],
+                        required=True, help="Choose the mode: compress, error_model, error_correction, or bsa")
+    parser.add_argument("--clusters", type=int, default=4, help="Number of clusters (k) for K-Means")
+    parser.add_argument("--error", type=float, help="Error rate for simulating binary errors")
+    parser.add_argument("--correct", type=str, choices=["median", "bsa"], help="Error correction method")
+
+    args = parser.parse_args()
+
+    # Load the image
+    image_np = loading(args.path)
+    pix = image_np.reshape((-1, 3))  # Flatten the image into a 2D array of pixels
+    size_initial = image_np.size
+
+    if args.mode == "compress":
+        # Perform compression using K-Means
+        centroids, Tags = vq_k_func(pix, args.clusters)
+        compressed_image = compress_inp_func(pix, centroids, Tags).reshape(image_np.shape).astype(np.uint8)
+        save_func(compressed_image, "compressed_image.png")
+        print("Compression completed. Image saved as compressed_image.png.")
+
+    elif args.mode == "error_model":
+        # Simulate errors
+        centroids, Tags = vq_k_func(pix, args.clusters)
+        damaged_tags = ber_func(Tags, args.error)
+        error_image = reconst_image_func(centroids, damaged_tags, image_np.shape)
+        save_func(error_image, "error_image.png")
+        print("Error simulation completed. Image saved as error_image.png.")
+
+    elif args.mode == "error_correction":
+        # Simulate errors and apply correction
+        centroids, Tags = vq_k_func(pix, args.clusters)
+        damaged_tags = ber_func(Tags, args.error)
+        error_image = reconst_image_func(centroids, damaged_tags, image_np.shape)
+        if args.correct == "median":
+            corrected_image = median_func(error_image)
+        elif args.correct == "bsa":
+            corrected_image = error_image  # Add specific BSA correction logic if needed
+        save_func(corrected_image, "corrected_image.png")
+        print("Error correction completed. Image saved as corrected_image.png.")
+
+    elif args.mode == "bsa":
+        # Perform compression with Binary Switching Algorithm
+        centroids, Tags = vq_gray_func(pix, args.clusters)
+        compressed_image = compress_inp_func(pix, centroids, Tags).reshape(image_np.shape).astype(np.uint8)
+        save_func(compressed_image, "compressed_with_bsa.png")
+        print("Compression with BSA completed. Image saved as compressed_with_bsa.png.")
